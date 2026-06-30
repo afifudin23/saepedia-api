@@ -1,7 +1,7 @@
 package config
 
 // Version adalah versi rilis aplikasi (dipakai release manager & /ping).
-const Version = "0.1.0"
+const Version = "0.1.1"
 
 // APIVersion adalah versi PATH API (segmen URL), mis. "v1" → /api/v1 & /docs/v1.
 // Beda dengan Version (semver rilis) di atas. Untuk naik versi: ubah ke "v2",
