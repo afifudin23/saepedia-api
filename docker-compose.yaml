@@ -1,5 +1,6 @@
 services:
   saepedia-api:
+    image: saepedia-api
     build:
       context: .
       dockerfile: deployments/docker/Dockerfile
