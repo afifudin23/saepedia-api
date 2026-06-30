@@ -338,7 +338,8 @@ func getVersion() string {
 	if err != nil {
 		return "unknown"
 	}
-	re := regexp.MustCompile(`Version\s*=\s*"(\d+\.\d+\.\d+)"`)
+	// Anchor ke `const Version` agar tidak ikut menangkap `const APIVersion`.
+	re := regexp.MustCompile(`(?m)^const Version\s*=\s*"(\d+\.\d+\.\d+)"`)
 	m := re.FindStringSubmatch(string(data))
 	if m == nil {
 		return "unknown"
@@ -352,7 +353,8 @@ func setVersion(newVersion string) {
 	if err != nil {
 		return
 	}
-	re := regexp.MustCompile(`(Version\s*=\s*)"[^"]*"`)
+	// Anchor ke `const Version` saja — JANGAN sampai menimpa `const APIVersion`.
+	re := regexp.MustCompile(`(?m)^(const Version\s*=\s*)"[^"]*"`)
 	updated := re.ReplaceAllString(string(data), `${1}"`+newVersion+`"`)
 	os.WriteFile(path, []byte(updated), 0644)
 }
