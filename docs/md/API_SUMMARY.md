@@ -1,39 +1,26 @@
-# Ringkasan API — Putra Sunda Trans
+# Ringkasan API — SEAPEDIA
 
-Ringkasan endpoint beserta contoh **request** dan **response**.
-Untuk detail format envelope response, lihat [API_RESPONSE.md](API_RESPONSE.md).
+Ringkasan singkat + contoh **request/response** untuk endpoint kunci.
+Daftar endpoint **lengkap** ada di [API_ENDPOINTS.md](API_ENDPOINTS.md); format envelope di
+[API_RESPONSE.md](API_RESPONSE.md).
 
 ## Info Umum
 
 | Item | Nilai |
 |------|-------|
-| Base URL | `http://localhost:{APP_PORT}` |
+| Base URL | `http://localhost:{APP_PORT}` (default `:5000`) |
 | Base Path | `/api/v1` |
 | Format | JSON (`Content-Type: application/json`) |
 | Auth | JWT via header `Authorization: Bearer <token>` |
-| Versi | `0.1.0` |
+| Identitas akun | **email** (bukan username) |
+| Otorisasi | mengikuti **active role** pada JWT |
+| Swagger UI | `/docs/v1/index.html` |
 
-Semua response sukses/gagal memakai envelope standar:
+Semua response memakai envelope standar:
 
 ```json
-{
-  "status": true,
-  "data": {},
-  "message": "",
-  "error": {},
-  "error_code": ""
-}
+{ "status": true, "data": {}, "list_data": [], "message": "", "error": {}, "error_code": "", "pagination": {} }
 ```
-
----
-
-## Daftar Endpoint
-
-| Method | Path | Auth | Keterangan |
-|--------|------|------|------------|
-| `GET`  | `/ping` | — | Health check |
-| `POST` | `/api/v1/auth/register` | — | Registrasi user baru |
-| `POST` | `/api/v1/auth/login` | — | Login & ambil token |
 
 ---
 
@@ -41,15 +28,9 @@ Semua response sukses/gagal memakai envelope standar:
 
 `GET /ping`
 
-**Response — 200 OK**
-
 ```json
-{
-  "message": "pong"
-}
+{ "status": true, "data": { "app": "SEAPEDIA API", "version": "0.1.0" }, "message": "pong" }
 ```
-
-> Catatan: endpoint ini tidak memakai envelope standar.
 
 ---
 
@@ -57,19 +38,19 @@ Semua response sukses/gagal memakai envelope standar:
 
 `POST /api/v1/auth/register`
 
-**Request Body**
-
 | Field | Tipe | Aturan |
 |-------|------|--------|
 | `email` | string | wajib, format email |
-| `password` | string | wajib, min 3 karakter |
-| `confirm_password` | string | wajib, harus sama dengan `password` |
+| `password` | string | wajib, min 6 |
+| `confirm_password` | string | wajib, sama dengan `password` |
+| `roles` | array | opsional, isi `buyer`/`seller`/`driver` (default `["buyer"]`) |
 
 ```json
 {
-  "email": "user@example.com",
-  "password": "secret",
-  "confirm_password": "secret"
+  "email": "user@mail.com",
+  "password": "Password123",
+  "confirm_password": "Password123",
+  "roles": ["buyer", "seller"]
 }
 ```
 
@@ -80,47 +61,17 @@ Semua response sukses/gagal memakai envelope standar:
   "status": true,
   "message": "user registered",
   "data": {
-    "user": {
-      "id": "uuid",
-      "email": "user@example.com",
-      "created_at": "2026-06-29T10:00:00Z"
-    },
-    "token": "jwt-token"
+    "user": { "id": "uuid", "email": "user@mail.com", "is_admin": false, "roles": ["buyer","seller"], "created_at": "..." },
+    "token": "jwt",
+    "active_role": "",
+    "need_role_selection": true
   }
 }
 ```
 
-**Kemungkinan Error**
+> `need_role_selection: true` bila punya >1 role → wajib `POST /auth/select-role` dulu.
 
-| Status | error_code | Kondisi |
-|--------|-----------|---------|
-| 400 | `VALIDATION_ERROR` | Field gagal validasi |
-| 409 | `CONFLICT` | Email sudah terdaftar |
-| 500 | `INTERNAL_SERVER_ERROR` | Kesalahan server |
-
-Contoh **409 Conflict**:
-
-```json
-{
-  "status": false,
-  "message": "email already exists",
-  "error_code": "CONFLICT"
-}
-```
-
-Contoh **400 Validation**:
-
-```json
-{
-  "status": false,
-  "message": "Validation failed",
-  "error": {
-    "email": "email must be a valid email",
-    "confirm_password": "confirm_password must match Password"
-  },
-  "error_code": "VALIDATION_ERROR"
-}
-```
+**Error:** `400 VALIDATION_ERROR`, `409 CONFLICT` (email sudah dipakai).
 
 ---
 
@@ -128,75 +79,54 @@ Contoh **400 Validation**:
 
 `POST /api/v1/auth/login`
 
-**Request Body**
-
-| Field | Tipe | Aturan |
-|-------|------|--------|
-| `email` | string | wajib, format email |
-| `password` | string | wajib, min 3 karakter |
-
 ```json
-{
-  "email": "user@example.com",
-  "password": "secret"
-}
+{ "email": "buyer1@seapedia.test", "password": "Buyer123" }
 ```
 
-**Response — 200 OK**
+**Response — 200 OK** (sama bentuk dengan register: `user`, `token`, `active_role`, `need_role_selection`).
+Bila user punya 1 role, `active_role` langsung terisi; admin → `active_role: "admin"`.
 
-```json
-{
-  "status": true,
-  "message": "login success",
-  "data": {
-    "user": {
-      "id": "uuid",
-      "email": "user@example.com",
-      "created_at": "2026-06-29T10:00:00Z"
-    },
-    "token": "jwt-token"
-  }
-}
-```
-
-**Kemungkinan Error**
-
-| Status | error_code | Kondisi |
-|--------|-----------|---------|
-| 400 | `VALIDATION_ERROR` | Field gagal validasi |
-| 401 | `UNAUTHORIZED` | Email/password salah |
-| 500 | `INTERNAL_SERVER_ERROR` | Kesalahan server |
-
-Contoh **401 Unauthorized**:
-
-```json
-{
-  "status": false,
-  "message": "invalid credentials",
-  "error_code": "UNAUTHORIZED"
-}
-```
+**Error:** `401 UNAUTHORIZED` (email/password salah).
 
 ---
 
-## Autentikasi
+## 4. Pilih Role Aktif
 
-Endpoint yang dilindungi membutuhkan header:
-
-```
-Authorization: Bearer <token>
-```
-
-Token didapat dari response `register` atau `login` (field `data.token`).
-
-Jika token tidak ada / tidak valid:
+`POST /api/v1/auth/select-role` — header `Authorization: Bearer <token>`
 
 ```json
-{ "message": "token tidak ada" }
+{ "role": "seller" }
 ```
+
+Mengembalikan **token baru** dengan `active_role` terisi. Error `403 FORBIDDEN` bila role tidak dimiliki.
+
+---
+
+## 5. Checkout (contoh alur transaksi)
+
+`POST /api/v1/buyer/checkout` (active role buyer)
+
 ```json
-{ "message": "token tidak valid" }
+{ "address_id": "uuid", "delivery_method": "regular", "discount_code": "SEAPEDIA10" }
 ```
+
+Response berisi order: `subtotal`, `discount`, `delivery_fee`, `tax` (PPN 12%), `total`, `status` (awal `Sedang Dikemas`), `items`, `status_history`.
+
+**Error:** `422 UNPROCESSABLE_ENTITY` (cart kosong / stok kurang / saldo kurang / diskon invalid), `404 NOT_FOUND` (alamat).
+
+---
+
+## Akun Demo (setelah `make seed`)
+
+Login pakai **email**, password pola `Role123`:
+
+| Email | Password | Role |
+|-------|----------|------|
+| `admin@seapedia.test` | `Admin123` | Admin |
+| `seller1@seapedia.test` | `Seller123` | Seller |
+| `buyer1@seapedia.test` | `Buyer123` | Buyer |
+| `driver1@seapedia.test` | `Driver123` | Driver |
+| `multi1@seapedia.test` | `Multi123` | Buyer+Seller+Driver |
 
 ---
 
@@ -204,9 +134,7 @@ Jika token tidak ada / tidak valid:
 
 | Bagian | File |
 |--------|------|
-| Routing root | [internal/router/router.go](../../internal/router/router.go) |
-| Route auth | [internal/auth/routes.go](../../internal/auth/routes.go) |
-| Handler auth | [internal/auth/handler/handler.go](../../internal/auth/handler/handler.go) |
-| Request DTO | [internal/auth/dto/request.go](../../internal/auth/dto/request.go) |
-| Response DTO | [internal/auth/dto/response.go](../../internal/auth/dto/response.go) |
-| Envelope response | [pkg/response/response.go](../../pkg/response/response.go) |
+| Router | [internal/router/router.go](../../internal/router/router.go) |
+| Auth | [internal/auth/](../../internal/auth/) |
+| Envelope response | [pkg/response/](../../pkg/response/) |
+| JWT (uid + active_role + jti) | [pkg/jwt/jwt.go](../../pkg/jwt/jwt.go) |

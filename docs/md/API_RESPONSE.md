@@ -1,151 +1,109 @@
-# Standard API Response
+# Standard API Response — SEAPEDIA
 
-## Format Umum
-
-Semua response menggunakan struktur yang sama:
+Semua endpoint memakai envelope yang sama (`pkg/response`).
 
 ```json
 {
-  "status": true | false,
-  "data": { ... } | null,
-  "list_data": [ ... ] | null,
+  "status": true,
+  "data": { },
+  "list_data": [ ],
   "message": "...",
-  "error": { ... } | null,
-  "error_code": "..." | null,
-  "pagination": { ... } | null
+  "error": { },
+  "error_code": "...",
+  "pagination": { }
 }
 ```
+
+Field yang tidak relevan diomit (`omitempty`).
 
 ---
 
-## Success Responses
+## Success
 
-### GET — Single Object
+### Single object
+
 ```json
-{
-  "status": true,
-  "data": {
-    "id": "uuid",
-    "field": "value"
-  },
-  "message": ""
-}
+{ "status": true, "data": { "id": "uuid", "field": "value" }, "message": "ok" }
 ```
 
-### GET — List
+### List + pagination
+
 ```json
 {
   "status": true,
-  "list_data": [
-    { "id": "uuid", "field": "value" },
-    { "id": "uuid", "field": "value" }
-  ],
+  "list_data": [ { "id": "uuid" } ],
   "message": "",
-  "pagination": {
-    "page": "1",
-    "per_page": "10",
-    "total": "100",
-    "total_pages": "10"
-  }
+  "pagination": { "page": 1, "per_page": 10, "total": 100, "total_pages": 10 }
 }
 ```
 
-### POST / PUT / PATCH — Return ID
+> `pagination` berisi **integer**. Query list: `?page=&per_page=` (default 1 & 10, maks 100).
+
+### Create
+
 ```json
-{
-  "status": true,
-  "data": { "id": "uuid" },
-  "message": ""
-}
+{ "status": true, "data": { "id": "uuid" }, "message": "created" }
 ```
 
-### DELETE
+### Delete
+
 ```json
-{
-  "status": true,
-  "data": { "deleted_count": 2 },
-  "message": ""
-}
+{ "status": true, "message": "deleted" }
 ```
 
 ---
 
-## Error Responses
+## Error
 
-### Validation Error (400)
+Bentuk umum: `{ "status": false, "message": "...", "error_code": "..." }`.
+
+| HTTP | error_code | Kondisi umum |
+|------|-----------|--------------|
+| 400 | `VALIDATION_ERROR` | Field gagal validasi (lihat `error` per field) |
+| 400 | `BAD_REQUEST` | Request tidak valid |
+| 401 | `UNAUTHORIZED` | Belum login / kredensial salah |
+| 401 | `TOKEN_INVALID` | Token tidak valid / kadaluarsa / sudah logout |
+| 403 | `FORBIDDEN` | Role aktif tidak diizinkan / bukan pemilik resource |
+| 404 | `NOT_FOUND` | Resource tidak ada |
+| 409 | `CONFLICT` | Bentrok unik (email/store name) / cart beda toko / job sudah diambil |
+| 422 | `UNPROCESSABLE_ENTITY` | Cart kosong, stok kurang, saldo kurang, diskon invalid, transisi status invalid |
+| 500 | `INTERNAL_SERVER_ERROR` | Kesalahan server (detail tidak dibocorkan) |
+
+### Validation (400)
+
 ```json
 {
   "status": false,
-  "data": null,
   "message": "Validation failed",
-  "error": {
-    "field_name": "error message"
-  },
+  "error": { "email": "email must be a valid email" },
   "error_code": "VALIDATION_ERROR"
 }
 ```
 
-### Bad Request (400)
+### Token invalid (401)
+
 ```json
-{
-  "status": false,
-  "data": null,
-  "message": "...",
-  "error": null,
-  "error_code": "BAD_REQUEST"
-}
+{ "status": false, "message": "token tidak valid atau kadaluarsa", "error_code": "TOKEN_INVALID" }
 ```
 
-### Unauthorized (401)
-```json
-{
-  "status": false,
-  "data": null,
-  "message": "...",
-  "error": null,
-  "error_code": "UNAUTHORIZED"
-}
-```
+### Unprocessable (422)
 
-### Forbidden (403)
 ```json
-{
-  "status": false,
-  "data": null,
-  "message": "...",
-  "error": null,
-  "error_code": "FORBIDDEN"
-}
-```
-
-### Not Found (404)
-```json
-{
-  "status": false,
-  "data": null,
-  "message": "...",
-  "error": null,
-  "error_code": "NOT_FOUND"
-}
-```
-
-### Internal Server Error (500)
-```json
-{
-  "status": false,
-  "data": null,
-  "message": "Internal server error",
-  "error": null,
-  "error_code": "INTERNAL_SERVER_ERROR"
-}
+{ "status": false, "message": "insufficient wallet balance", "error_code": "UNPROCESSABLE_ENTITY" }
 ```
 
 ---
 
 ## Auth Header
 
-Semua endpoint kecuali `/auth/login`, `/auth/register`, `/auth/forgot-password`, `/auth/reset-password` wajib menyertakan:
+Endpoint privat wajib header:
 
 ```
-Authorization: Bearer <access_token>
+Authorization: Bearer <token>
 ```
+
+**Endpoint publik (tanpa token):** `GET /ping`, `GET /` , `GET|POST /api/v1/reviews`,
+`GET /api/v1/stores`, `GET /api/v1/stores/:id`, `GET /api/v1/products`, `GET /api/v1/products/:id`.
+
+Token didapat dari `register`/`login` (`data.token`). Otorisasi mengikuti **active role** di token —
+bila punya >1 role, pilih dulu via `POST /api/v1/auth/select-role`.

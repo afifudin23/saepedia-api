@@ -1,7 +1,9 @@
-# Developer Guide — Putra Sunda Trans API
+# Developer Guide — SEAPEDIA API
 
-> Ringkasan singkat untuk developer yang ingin memahami dan berkontribusi pada project ini.
-> Untuk panduan lengkap, lihat [DEVELOPER_GUIDE_DETAIL.md](DEVELOPER_GUIDE_DETAIL.md).
+> Ringkasan untuk developer. Detail lengkap: [DEVELOPER_GUIDE_DETAIL.md](DEVELOPER_GUIDE_DETAIL.md).
+> Daftar endpoint: [API_ENDPOINTS.md](API_ENDPOINTS.md). Format response: [API_RESPONSE.md](API_RESPONSE.md).
+
+Module path: `github.com/afifudin23/saepedia-api`
 
 ---
 
@@ -9,75 +11,83 @@
 
 | Layer | Library |
 |---|---|
-| HTTP Framework | [Gin](https://github.com/gin-gonic/gin) v1.9.1 |
+| HTTP Framework | [Gin](https://github.com/gin-gonic/gin) v1.10 |
 | ORM | [GORM](https://gorm.io) + driver PostgreSQL |
 | Auth | JWT (`golang-jwt/jwt/v5`) + Argon2id (`alexedwards/argon2id`) |
 | Logging | Zap (`go.uber.org/zap`) |
 | Validation | `go-playground/validator/v10` |
 | Migration | [golang-migrate](https://github.com/golang-migrate/migrate) (CLI) |
+| API Docs | [swaggo](https://github.com/swaggo/swag) + gin-swagger |
 | Hot Reload | [Air](https://github.com/air-verse/air) |
 
 ---
 
 ## Arsitektur
 
-Project menggunakan **Clean Architecture** dengan dependency injection manual.
+**Clean Architecture** dengan dependency injection manual di `internal/router/router.go`.
 
 ```
-cmd/api/main.go        → Entry point, inject semua dependency
+cmd/api/main.go        → Entry point (load config, connect DB, set swagger version, run)
 internal/{module}/
-  ├── domain/          → Entity + Interface (tidak ada external dep)
-  ├── dto/             → Request & Response struct
-  ├── repository/      → Implementasi data access (GORM)
-  ├── usecase/         → Business logic
-  ├── handler/         → HTTP handler (Gin)
-  └── routes.go        → Registrasi route module
-internal/router/       → Orchestrator semua module
-pkg/                   → Shared utilities (response, jwt, middleware, logger, helper)
-config/                → Load .env ke Config struct
-database/              → Koneksi PostgreSQL via GORM
-migrations/            → File SQL migrasi (golang-migrate)
+  ├── domain/          → Entity + interface repository/usecase + error sentinel
+  ├── dto/             → Request & response struct (+ mapper)
+  ├── repository/      → Data access (GORM) — TX-aware via pkg/tx
+  ├── usecase/         → Business logic (orkestrasi, aturan, transaksi)
+  ├── handler/         → HTTP handler (Gin) + anotasi Swagger
+  └── routes.go        → Registrasi route + middleware (Auth, RequireRole)
+internal/router/       → Rakit semua module
+pkg/                   → response, jwt, helper, middleware, pagination, logger, clock, tx
+config/                → LoadConfig (.env) + version.go (Version, APIVersion)
+database/              → Koneksi PostgreSQL (GORM)
+migrations/            → SQL migrasi (golang-migrate)
+scripts/seed/          → Seeder data demo (package main)
+scripts/release/       → Release manager interaktif
+docs/swagger/          → File OpenAPI hasil `make swag`
 ```
 
-Aturan dependency: **Handler → Usecase → Repository → Domain**. Layer bawah tidak boleh tahu layer atas.
+Aturan dependency: **Handler → Usecase → Repository → Domain**. Business logic ada di **usecase**;
+repository hanya operasi data. Operasi lintas-repo yang harus atomik dibungkus `pkg/tx.Manager`.
+
+### Modul
+
+`auth`, `user`, `review`, `store`, `product`, `wallet`, `address`, `cart`, `discount`, `order`,
+`delivery`, `admin`, `setting`.
 
 ---
 
 ## Quick Start
 
 ```bash
-# 1. Clone & install dependencies
-git clone https://github.com/afifudin23/putra-sunda-trans-api.git
-cd putra-sunda-trans-api
-make setup
+git clone https://github.com/afifudin23/saepedia-api.git
+cd saepedia-api
+make setup                 # go mod tidy + install migrate, air, swag
 
-# 2. Siapkan env
-cp .env.example .env
-# Edit .env sesuai konfigurasi lokal
+cp .env.example .env       # isi DB_PASSWORD & ACCESS_KEY
+psql -U postgres -c "CREATE DATABASE seapedia_db;"
 
-# 3. Jalankan migrasi
-make migrate-up
-
-# 4. Jalankan server (hot reload)
-make air
-# atau tanpa hot reload
-make run
+make migrate-up            # buat tabel
+make seed                  # data demo
+make run                   # atau: make air (hot reload)
 ```
+
+Swagger UI: `http://localhost:5000/docs/v1/index.html`.
 
 ---
 
 ## Environment Variables
 
 ```env
-APP_NAME="Putra Sunda Trans API"
+APP_NAME=SEAPEDIA API
 APP_PORT=5000
-DB_HOST="localhost"
-DB_PORT="5432"
-DB_USER="postgres"
-DB_PASSWORD="your_password"
-DB_NAME="putra_sunda_db"
-ACCESS_KEY="your_jwt_secret"
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=your_password
+DB_NAME=seapedia_db
+ACCESS_KEY=your_jwt_secret
 ```
+
+> Nilai **tanpa tanda kutip** (Makefile membaca `.env` apa adanya). `DB_PASSWORD` & `ACCESS_KEY` wajib.
 
 ---
 
@@ -85,69 +95,41 @@ ACCESS_KEY="your_jwt_secret"
 
 | Command | Deskripsi |
 |---|---|
-| `make setup` | Install dependencies, migrate CLI, dan air |
-| `make run` | Jalankan server (go run) |
-| `make air` | Jalankan server dengan hot reload |
+| `make setup` | go mod tidy + install migrate, air, swag |
+| `make run` / `make air` | Jalankan server (biasa / hot reload) |
 | `make build` | Build binary ke `bin/` |
+| `make swag` | Generate Swagger ke `docs/swagger` |
+| `make seed` | Jalankan semua seeder |
+| `make seed-one name=user` | Jalankan seeder satuan (`user`/`discount`/`review`/`address`/`order`) |
+| `make release` | Release manager (bump version + tag + push) |
 | `make migrate-up` | Jalankan semua migrasi |
-| `make migrate-down` | Rollback semua migrasi |
+| `make migrate-down [n=N]` | Mundur N langkah (default 1) |
+| `make migrate-drop` | Hapus semua tabel (ke nol) |
+| `make migrate-reset` | Drop → up (skema fresh) |
+| `make db-reset` | Drop → up → seed (reset penuh + data demo) |
 | `make migrate-create name=xxx` | Buat file migrasi baru |
-| `make migrate-version` | Cek versi migrasi saat ini |
-| `make migrate-force version=N` | Force migrasi ke versi tertentu |
-
----
-
-## Menambahkan Modul Baru
-
-Struktur yang harus dibuat untuk setiap modul baru (contoh: `order`):
-
-```
-internal/order/
-├── domain/order.go       → Order struct + OrderRepository interface + error sentinels
-├── dto/request.go        → CreateOrderRequest, dll
-├── dto/response.go       → OrderResponse, dll
-├── repository/
-│   ├── model.go          → OrderModel (GORM model)
-│   └── repository.go     → Implementasi OrderRepository
-├── usecase/usecase.go    → Business logic
-├── handler/handler.go    → HTTP handlers
-└── routes.go             → Daftarkan routes ke gin.RouterGroup
-```
-
-Setelah itu, daftarkan modul di `internal/router/router.go`.
-
----
-
-## Endpoint Saat Ini
-
-| Method | Path | Deskripsi | Auth |
-|---|---|---|---|
-| GET | `/ping` | Health check | - |
-| POST | `/api/v1/auth/register` | Registrasi user baru | - |
-| POST | `/api/v1/auth/login` | Login, mendapatkan JWT | - |
-
-Header auth untuk endpoint terproteksi: `Authorization: Bearer <token>`
-
----
-
-## Format Response
-
-Semua response menggunakan struktur standar. Lihat [API_RESPONSE.md](API_RESPONSE.md) untuk detail lengkap.
-
-```json
-// Success
-{ "status": true, "data": {}, "message": "..." }
-
-// Error
-{ "status": false, "message": "...", "error": {}, "error_code": "..." }
-```
+| `make migrate-version` / `migrate-force version=N` | Cek / paksa versi migrasi |
 
 ---
 
 ## Konvensi Kode
 
-- **Error handling**: Gunakan error sentinels di `domain/` (contoh: `ErrEmailAlreadyExists`)
-- **Logging**: Gunakan `pkg/logger`, bukan `fmt.Println`
-- **Response**: Selalu gunakan `pkg/response` untuk semua HTTP response
-- **Validation**: Gunakan binding tag di DTO request struct
-- **Context**: Selalu teruskan `ctx context.Context` ke repository method
+- **Response**: selalu lewat `pkg/response` — `response.Success(c, http.StatusOK, "msg", data)` /
+  `response.List(c, page, perPage, total, "msg", listData)` / `response.BadRequest`,
+  `Unauthorized`, `Forbidden`, `NotFound`, `Conflict`, `UnprocessableEntity`, `InternalServerError`,
+  `ValidationError`. Jangan `c.JSON(...)` langsung.
+- **Auth**: `middleware.Auth()` (validasi JWT) lalu `middleware.RequireRole("buyer"/"seller"/"driver"/"admin")`.
+  Ambil context: `middleware.UserID(c)`, `middleware.ActiveRole(c)`.
+- **Error**: error sentinel di `domain/` (mis. `ErrStoreNotFound`), bandingkan `errors.Is`, map ke
+  HTTP di handler.
+- **Transaksi**: bungkus dengan `txMgr.Do(ctx, func(ctx) error { ... })`; repo membaca handle via
+  `tx.DB(ctx, r.db)` agar ikut transaksi yang sama.
+- **Logging**: `pkg/logger` (zap), bukan `fmt.Println`.
+- **Keamanan**: konten user-generated di-`html.EscapeString`; query selalu parameterized.
+
+---
+
+## Menambah Modul Baru
+
+Buat `internal/<modul>/` dengan `domain/`, `dto/`, `repository/`, `usecase/`, `handler/`, `routes.go`,
+lalu daftarkan di `internal/router/router.go`. Detail langkah: lihat [DEVELOPER_GUIDE_DETAIL.md](DEVELOPER_GUIDE_DETAIL.md) bagian "Menambah Modul Baru".
