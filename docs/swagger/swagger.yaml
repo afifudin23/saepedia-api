@@ -1,0 +1,1590 @@
+basePath: /api/v1
+definitions:
+  dto.AddItemRequest:
+    properties:
+      product_id:
+        type: string
+      quantity:
+        type: integer
+    required:
+    - product_id
+    - quantity
+    type: object
+  dto.CheckoutRequest:
+    properties:
+      address_id:
+        type: string
+      delivery_method:
+        enum:
+        - instant
+        - next_day
+        - regular
+        type: string
+      discount_code:
+        maxLength: 50
+        type: string
+    required:
+    - address_id
+    - delivery_method
+    type: object
+  dto.CreateProductRequest:
+    properties:
+      description:
+        maxLength: 2000
+        type: string
+      image_url:
+        maxLength: 500
+        type: string
+      name:
+        maxLength: 200
+        minLength: 1
+        type: string
+      price:
+        minimum: 0
+        type: integer
+      stock:
+        minimum: 0
+        type: integer
+    required:
+    - name
+    - price
+    type: object
+  dto.CreateReviewRequest:
+    properties:
+      comment:
+        maxLength: 1000
+        minLength: 1
+        type: string
+      rating:
+        maximum: 5
+        minimum: 1
+        type: integer
+      reviewer_name:
+        maxLength: 100
+        minLength: 1
+        type: string
+    required:
+    - comment
+    - rating
+    - reviewer_name
+    type: object
+  dto.GenerateRequest:
+    properties:
+      code:
+        maxLength: 50
+        minLength: 3
+        type: string
+      discount_type:
+        enum:
+        - percent
+        - fixed
+        type: string
+      discount_value:
+        type: integer
+      expires_at:
+        description: RFC3339, mis. 2026-12-31T23:59:59Z
+        type: string
+      max_discount:
+        minimum: 0
+        type: integer
+      min_spend:
+        minimum: 0
+        type: integer
+      usage_limit:
+        type: integer
+    required:
+    - code
+    - discount_type
+    - discount_value
+    - expires_at
+    type: object
+  dto.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  dto.PreviewRequest:
+    properties:
+      delivery_method:
+        enum:
+        - instant
+        - next_day
+        - regular
+        type: string
+      discount_code:
+        maxLength: 50
+        type: string
+    required:
+    - delivery_method
+    type: object
+  dto.RegisterRequest:
+    properties:
+      confirm_password:
+        type: string
+      email:
+        type: string
+      password:
+        minLength: 6
+        type: string
+      roles:
+        description: 'Roles: pilih satu atau lebih dari buyer/seller/driver. Default
+          buyer bila kosong.'
+        items:
+          type: string
+        type: array
+    required:
+    - confirm_password
+    - email
+    - password
+    type: object
+  dto.SelectRoleRequest:
+    properties:
+      role:
+        enum:
+        - admin
+        - buyer
+        - seller
+        - driver
+        type: string
+    required:
+    - role
+    type: object
+  dto.TopUpRequest:
+    properties:
+      amount:
+        type: integer
+    required:
+    - amount
+    type: object
+  dto.UpdateItemRequest:
+    properties:
+      quantity:
+        type: integer
+    required:
+    - quantity
+    type: object
+  dto.UpdateProductRequest:
+    properties:
+      description:
+        maxLength: 2000
+        type: string
+      image_url:
+        maxLength: 500
+        type: string
+      name:
+        maxLength: 200
+        minLength: 1
+        type: string
+      price:
+        minimum: 0
+        type: integer
+      stock:
+        minimum: 0
+        type: integer
+    required:
+    - name
+    - price
+    type: object
+  dto.UpsertAddressRequest:
+    properties:
+      full_address:
+        maxLength: 500
+        minLength: 5
+        type: string
+      is_primary:
+        type: boolean
+      phone:
+        maxLength: 20
+        minLength: 5
+        type: string
+      recipient_name:
+        maxLength: 100
+        minLength: 1
+        type: string
+    required:
+    - full_address
+    - phone
+    - recipient_name
+    type: object
+  dto.UpsertStoreRequest:
+    properties:
+      description:
+        maxLength: 1000
+        type: string
+      name:
+        maxLength: 150
+        minLength: 3
+        type: string
+    required:
+    - name
+    type: object
+  response.ErrorCode:
+    enum:
+    - BAD_REQUEST
+    - UNAUTHORIZED
+    - FORBIDDEN
+    - NOT_FOUND
+    - CONFLICT
+    - UNPROCESSABLE_ENTITY
+    - INTERNAL_SERVER_ERROR
+    - VALIDATION_ERROR
+    - TOKEN_EXPIRED
+    - TOKEN_INVALID
+    type: string
+    x-enum-varnames:
+    - ErrCodeBadRequest
+    - ErrCodeUnauthorized
+    - ErrCodeForbidden
+    - ErrCodeNotFound
+    - ErrCodeConflict
+    - ErrCodeUnprocessable
+    - ErrCodeInternalServerError
+    - ErrCodeValidation
+    - ErrCodeTokenExpired
+    - ErrCodeTokenInvalid
+  response.Pagination:
+    properties:
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  response.Response:
+    properties:
+      data: {}
+      error: {}
+      error_code:
+        $ref: '#/definitions/response.ErrorCode'
+      list_data: {}
+      message:
+        type: string
+      pagination:
+        $ref: '#/definitions/response.Pagination'
+      status:
+        type: boolean
+    type: object
+info:
+  contact:
+    name: SEAPEDIA Dev
+  description: |-
+    Backend API marketplace multi-role (Admin, Seller, Buyer, Driver) — COMPFEST 18.
+    Versi yang tampil di UI diambil dari config.Version (di-set saat runtime).
+    Login pakai email. Otorisasi mengikuti ACTIVE ROLE pada JWT (pilih via /auth/select-role).
+  termsOfService: http://swagger.io/terms/
+  title: SEAPEDIA API
+  version: "1.0"
+paths:
+  /admin/deliveries:
+    get:
+      parameters:
+      - description: Halaman
+        in: query
+        name: page
+        type: integer
+      - description: Item per halaman
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Monitoring pengiriman (admin)
+      tags:
+      - Admin
+  /admin/orders:
+    get:
+      parameters:
+      - description: Halaman
+        in: query
+        name: page
+        type: integer
+      - description: Item per halaman
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Monitoring order (admin)
+      tags:
+      - Admin
+  /admin/overdue-orders:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Order yang sedang overdue (admin)
+      tags:
+      - Admin
+  /admin/overdue/run:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Jalankan overdue handling manual (admin)
+      tags:
+      - Admin
+  /admin/products:
+    get:
+      parameters:
+      - description: Halaman
+        in: query
+        name: page
+        type: integer
+      - description: Item per halaman
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Monitoring produk (admin)
+      tags:
+      - Admin
+  /admin/promos:
+    get:
+      parameters:
+      - description: Halaman
+        in: query
+        name: page
+        type: integer
+      - description: Item per halaman
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Daftar promo (admin)
+      tags:
+      - Admin
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Data promo (usage_limit diabaikan)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.GenerateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Generate promo (admin)
+      tags:
+      - Admin
+  /admin/promos/{id}:
+    get:
+      parameters:
+      - description: Discount ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Detail voucher/promo by ID (admin)
+      tags:
+      - Admin
+  /admin/simulate/advance-day:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Jumlah hari
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            days:
+              type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Majukan waktu N hari + jalankan overdue (admin)
+      tags:
+      - Admin
+  /admin/simulate/now:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Lihat waktu virtual saat ini (admin)
+      tags:
+      - Admin
+  /admin/stores:
+    get:
+      parameters:
+      - description: Halaman
+        in: query
+        name: page
+        type: integer
+      - description: Item per halaman
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Monitoring toko (admin)
+      tags:
+      - Admin
+  /admin/summary:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Ringkasan monitoring marketplace (admin)
+      tags:
+      - Admin
+  /admin/users:
+    get:
+      parameters:
+      - description: Halaman
+        in: query
+        name: page
+        type: integer
+      - description: Item per halaman
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Monitoring users (admin)
+      tags:
+      - Admin
+  /admin/vouchers:
+    get:
+      parameters:
+      - description: Halaman
+        in: query
+        name: page
+        type: integer
+      - description: Item per halaman
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Daftar voucher (admin)
+      tags:
+      - Admin
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Data voucher
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.GenerateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Generate voucher (admin)
+      tags:
+      - Admin
+  /admin/vouchers/{id}:
+    get:
+      parameters:
+      - description: Discount ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Detail voucher/promo by ID (admin)
+      tags:
+      - Admin
+  /auth/balance-summary:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Ringkasan saldo lintas role
+      tags:
+      - Auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Kredensial login
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Login (pakai email)
+      tags:
+      - Auth
+  /auth/logout:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Logout (invalidasi token via denylist)
+      tags:
+      - Auth
+  /auth/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Profil user (roles + active role)
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Data registrasi (login pakai email)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Registrasi user baru
+      tags:
+      - Auth
+  /auth/select-role:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Role yang dipilih
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.SelectRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Pilih role aktif (terbitkan token baru)
+      tags:
+      - Auth
+  /buyer/addresses:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Daftar alamat (buyer)
+      tags:
+      - Buyer
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Alamat
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpsertAddressRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Tambah alamat (buyer)
+      tags:
+      - Buyer
+  /buyer/addresses/{id}:
+    delete:
+      parameters:
+      - description: Address ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Hapus alamat (buyer)
+      tags:
+      - Buyer
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Address ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Alamat
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpsertAddressRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Ubah alamat (buyer)
+      tags:
+      - Buyer
+  /buyer/cart:
+    delete:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Kosongkan cart
+      tags:
+      - Buyer
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Lihat cart (buyer)
+      tags:
+      - Buyer
+  /buyer/cart/items:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Item
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AddItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Tambah produk ke cart (single-store)
+      tags:
+      - Buyer
+  /buyer/cart/items/{productID}:
+    delete:
+      parameters:
+      - description: Product ID
+        in: path
+        name: productID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Hapus item dari cart
+      tags:
+      - Buyer
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Product ID
+        in: path
+        name: productID
+        required: true
+        type: string
+      - description: Qty baru
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Ubah qty item cart
+      tags:
+      - Buyer
+  /buyer/checkout:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Alamat + metode kirim + diskon opsional
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CheckoutRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Response'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Checkout dari cart (buyer)
+      tags:
+      - Buyer
+  /buyer/checkout/preview:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Metode kirim + diskon opsional
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PreviewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Hitung ringkasan checkout (buyer)
+      tags:
+      - Buyer
+  /buyer/orders:
+    get:
+      parameters:
+      - description: Halaman
+        in: query
+        name: page
+        type: integer
+      - description: Item per halaman
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Riwayat order (buyer)
+      tags:
+      - Buyer
+  /buyer/orders/{id}:
+    get:
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Detail order + timeline status (buyer)
+      tags:
+      - Buyer
+  /buyer/reports:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Ringkasan pengeluaran (buyer)
+      tags:
+      - Buyer
+  /buyer/wallet:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Saldo wallet (buyer)
+      tags:
+      - Buyer
+  /buyer/wallet/topup:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Jumlah top-up
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.TopUpRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Top-up dummy (buyer)
+      tags:
+      - Buyer
+  /buyer/wallet/transactions:
+    get:
+      parameters:
+      - description: Halaman
+        in: query
+        name: page
+        type: integer
+      - description: Item per halaman
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Riwayat transaksi wallet (buyer)
+      tags:
+      - Buyer
+  /driver/dashboard:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Dashboard driver (job aktif, riwayat, earning)
+      tags:
+      - Driver
+  /driver/jobs:
+    get:
+      parameters:
+      - description: Halaman
+        in: query
+        name: page
+        type: integer
+      - description: Item per halaman
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Daftar job tersedia (driver)
+      tags:
+      - Driver
+  /driver/jobs/{id}:
+    get:
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Detail job tersedia (driver)
+      tags:
+      - Driver
+  /driver/jobs/{id}/complete:
+    post:
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Selesaikan job → Pesanan Selesai (driver)
+      tags:
+      - Driver
+  /driver/jobs/{id}/take:
+    post:
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Ambil job → Sedang Dikirim (driver)
+      tags:
+      - Driver
+  /products:
+    get:
+      parameters:
+      - description: Cari nama produk
+        in: query
+        name: search
+        type: string
+      - description: Halaman
+        in: query
+        name: page
+        type: integer
+      - description: Item per halaman
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Katalog produk (publik)
+      tags:
+      - Public
+  /products/{id}:
+    get:
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Detail produk (publik)
+      tags:
+      - Public
+  /reviews:
+    get:
+      parameters:
+      - description: Halaman
+        in: query
+        name: page
+        type: integer
+      - description: Item per halaman
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Daftar review aplikasi (publik)
+      tags:
+      - Reviews
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Review
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Kirim review aplikasi (publik, guest boleh)
+      tags:
+      - Reviews
+  /seller/orders:
+    get:
+      parameters:
+      - description: Halaman
+        in: query
+        name: page
+        type: integer
+      - description: Item per halaman
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Daftar order masuk (seller)
+      tags:
+      - Seller
+  /seller/orders/{id}:
+    get:
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Detail order toko (seller)
+      tags:
+      - Seller
+  /seller/orders/{id}/process:
+    post:
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 'Proses order: Sedang Dikemas → Menunggu Pengirim (seller)'
+      tags:
+      - Seller
+  /seller/products:
+    get:
+      parameters:
+      - description: Halaman
+        in: query
+        name: page
+        type: integer
+      - description: Item per halaman
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Daftar produk toko sendiri (seller)
+      tags:
+      - Seller
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Produk
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Tambah produk (seller)
+      tags:
+      - Seller
+  /seller/products/{id}:
+    delete:
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Hapus produk sendiri (seller)
+      tags:
+      - Seller
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Produk
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Ubah produk sendiri (seller)
+      tags:
+      - Seller
+  /seller/reports:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Ringkasan pendapatan (seller)
+      tags:
+      - Seller
+  /seller/store:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Detail toko sendiri (seller)
+      tags:
+      - Seller
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Data toko
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpsertStoreRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Buat/ubah toko sendiri (seller)
+      tags:
+      - Seller
+  /stores:
+    get:
+      parameters:
+      - description: Halaman
+        in: query
+        name: page
+        type: integer
+      - description: Item per halaman
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Daftar toko (publik)
+      tags:
+      - Public
+  /stores/{id}:
+    get:
+      parameters:
+      - description: Store ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Detail toko (publik)
+      tags:
+      - Public
+securityDefinitions:
+  BearerAuth:
+    description: 'Masukkan token dengan format: Bearer <token>'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -1,0 +1,285 @@
+{
+  "info": {
+    "name": "SEAPEDIA API (Level 1-3)",
+    "_postman_id": "seapedia-l1-l3",
+    "description": "Koleksi endpoint SEAPEDIA Level 1-3. Set variable {{base}} dan {{token}}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base", "value": "http://localhost:5000/api/v1" },
+    { "key": "token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Public",
+      "item": [
+        { "name": "Ping", "request": { "method": "GET", "url": "http://localhost:5000/ping" } },
+        { "name": "List Reviews", "request": { "method": "GET", "url": "{{base}}/reviews" } },
+        {
+          "name": "Create Review",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"reviewer_name\": \"Andi\",\n  \"rating\": 5,\n  \"comment\": \"Aplikasinya keren!\"\n}" },
+            "url": "{{base}}/reviews"
+          }
+        },
+        { "name": "List Stores", "request": { "method": "GET", "url": "{{base}}/stores" } },
+        { "name": "Store Detail", "request": { "method": "GET", "url": "{{base}}/stores/:id" } },
+        { "name": "List Products", "request": { "method": "GET", "url": "{{base}}/products?search=&page=1&per_page=10" } },
+        { "name": "Product Detail", "request": { "method": "GET", "url": "{{base}}/products/:id" } }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"newuser@mail.com\",\n  \"password\": \"Password123\",\n  \"confirm_password\": \"Password123\",\n  \"roles\": [\"buyer\", \"seller\"]\n}" },
+            "url": "{{base}}/auth/register"
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"buyer1@seapedia.test\",\n  \"password\": \"Buyer123\"\n}" },
+            "url": "{{base}}/auth/login"
+          }
+        },
+        {
+          "name": "Select Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"role\": \"seller\"\n}" },
+            "url": "{{base}}/auth/select-role"
+          }
+        },
+        { "name": "Me", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/auth/me" } },
+        { "name": "Balance Summary", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/auth/balance-summary" } },
+        { "name": "Logout", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/auth/logout" } }
+      ]
+    },
+    {
+      "name": "Seller",
+      "item": [
+        { "name": "Get My Store", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/seller/store" } },
+        {
+          "name": "Upsert Store",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Toko Maju Jaya\",\n  \"description\": \"Toko serba ada\"\n}" },
+            "url": "{{base}}/seller/store"
+          }
+        },
+        { "name": "List My Products", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/seller/products" } },
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Sepatu Lari\",\n  \"description\": \"Ringan dan nyaman\",\n  \"price\": 350000,\n  \"stock\": 10\n}" },
+            "url": "{{base}}/seller/products"
+          }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Sepatu Lari v2\",\n  \"description\": \"Update\",\n  \"price\": 375000,\n  \"stock\": 8\n}" },
+            "url": "{{base}}/seller/products/:id"
+          }
+        },
+        { "name": "Delete Product", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/seller/products/:id" } },
+        { "name": "Incoming Orders", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/seller/orders" } }
+      ]
+    },
+    {
+      "name": "Buyer",
+      "item": [
+        { "name": "Get Wallet", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/buyer/wallet" } },
+        {
+          "name": "Top Up",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"amount\": 500000\n}" },
+            "url": "{{base}}/buyer/wallet/topup"
+          }
+        },
+        { "name": "Wallet Transactions", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/buyer/wallet/transactions" } },
+        { "name": "List Addresses", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/buyer/addresses" } },
+        {
+          "name": "Create Address",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"recipient_name\": \"Budi\",\n  \"phone\": \"08123456789\",\n  \"full_address\": \"Jl. Mawar No. 1\",\n  \"is_primary\": true\n}" },
+            "url": "{{base}}/buyer/addresses"
+          }
+        },
+        { "name": "Get Cart", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/buyer/cart" } },
+        {
+          "name": "Add Cart Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"product_id\": \"<PRODUCT_ID>\",\n  \"quantity\": 2\n}" },
+            "url": "{{base}}/buyer/cart/items"
+          }
+        },
+        {
+          "name": "Update Cart Item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"quantity\": 3\n}" },
+            "url": "{{base}}/buyer/cart/items/:productID"
+          }
+        },
+        { "name": "Remove Cart Item", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/buyer/cart/items/:productID" } },
+        { "name": "Clear Cart", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/buyer/cart" } },
+        {
+          "name": "Checkout Preview",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"delivery_method\": \"regular\"\n}" },
+            "url": "{{base}}/buyer/checkout/preview"
+          }
+        },
+        {
+          "name": "Checkout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"address_id\": \"<ADDRESS_ID>\",\n  \"delivery_method\": \"regular\"\n}" },
+            "url": "{{base}}/buyer/checkout"
+          }
+        },
+        { "name": "Order History", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/buyer/orders" } },
+        { "name": "Order Detail", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/buyer/orders/:id" } },
+        { "name": "Buyer Report", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/buyer/reports" } },
+        {
+          "name": "Checkout with Discount",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"address_id\": \"<ADDRESS_ID>\",\n  \"delivery_method\": \"regular\",\n  \"discount_code\": \"SEAPEDIA10\"\n}" },
+            "url": "{{base}}/buyer/checkout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Seller Orders (L4)",
+      "item": [
+        { "name": "Order Detail", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/seller/orders/:id" } },
+        { "name": "Process Order", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/seller/orders/:id/process" } },
+        { "name": "Seller Report", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/seller/reports" } }
+      ]
+    },
+    {
+      "name": "Driver (L5)",
+      "item": [
+        { "name": "Available Jobs", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/driver/jobs" } },
+        { "name": "Job Detail", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/driver/jobs/:id" } },
+        { "name": "Take Job", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/driver/jobs/:id/take" } },
+        { "name": "Complete Job", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/driver/jobs/:id/complete" } },
+        { "name": "Driver Dashboard", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/driver/dashboard" } }
+      ]
+    },
+    {
+      "name": "Admin (L4/L6)",
+      "item": [
+        { "name": "Summary", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/admin/summary" } },
+        { "name": "Users", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/admin/users" } },
+        { "name": "Stores", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/admin/stores" } },
+        { "name": "Products", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/admin/products" } },
+        { "name": "Orders", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/admin/orders" } },
+        { "name": "Deliveries", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/admin/deliveries" } },
+        { "name": "Overdue Orders", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/admin/overdue-orders" } },
+        {
+          "name": "Generate Voucher",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"NEWYEAR\",\n  \"discount_type\": \"percent\",\n  \"discount_value\": 15,\n  \"max_discount\": 30000,\n  \"min_spend\": 100000,\n  \"expires_at\": \"2027-01-01T00:00:00Z\",\n  \"usage_limit\": 50\n}" },
+            "url": "{{base}}/admin/vouchers"
+          }
+        },
+        { "name": "List Vouchers", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/admin/vouchers" } },
+        {
+          "name": "Generate Promo",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"GAJIAN\",\n  \"discount_type\": \"fixed\",\n  \"discount_value\": 10000,\n  \"min_spend\": 50000,\n  \"expires_at\": \"2027-01-01T00:00:00Z\"\n}" },
+            "url": "{{base}}/admin/promos"
+          }
+        },
+        { "name": "List Promos", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/admin/promos" } },
+        { "name": "Simulate Now", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/admin/simulate/now" } },
+        {
+          "name": "Advance Day (+ run overdue)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"days\": 5\n}" },
+            "url": "{{base}}/admin/simulate/advance-day"
+          }
+        },
+        { "name": "Run Overdue", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{base}}/admin/overdue/run" } }
+      ]
+    }
+  ]
+}

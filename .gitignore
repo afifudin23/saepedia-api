@@ -1,0 +1,13 @@
+# Binaries
+bin/
+tmp/
+*.exe
+
+# Env
+.env
+
+# Air
+build-errors.log
+
+# Go
+vendor/

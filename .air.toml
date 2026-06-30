@@ -1,0 +1,22 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/main.exe ./cmd/api"
+  bin = "./tmp/main.exe"
+  delay = 1000
+  exclude_dir = ["tmp", "vendor", "bin", "docs", "migrations"]
+  include_ext = ["go", "env"]
+  include_file = [".env"]
+  kill_delay = "0s"
+  log = "build-errors.log"
+  rerun_delay = 500
+
+[log]
+  time = true
+
+[color]
+  build = "yellow"
+  runner = "green"
+  main = "magenta"
+  watcher = "cyan"
