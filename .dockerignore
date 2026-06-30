@@ -1,0 +1,14 @@
+.git
+.github
+.vscode
+.idea
+
+bin
+tmp
+
+.env
+
+*.log
+
+README.md
+LICENSE

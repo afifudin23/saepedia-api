@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.2] - 2026-06-30
+
+### Detail Versi 0.1.2
+
+#### 🐳 Deployment
+
+- **Deskripsi:**
+    - **Docker:** `deployments/docker/Dockerfile` (multi-stage build Go → image Alpine kecil) + `docker-compose.yaml` (port 5000, `env_file: .env`, network eksternal `postgres_default`) + `.dockerignore`
+
+#### ♻️ Refactor
+
+- **Deskripsi:**
+    - **Release manager:** release penuh kini diizinkan di branch `main`, `staging`, dan `dev` (sebelumnya hanya `dev`); sync rebase mengikuti branch yang sedang aktif
+
+---
+
 ## [0.1.1] - 2026-06-30
 
 ### Detail Versi 0.1.1

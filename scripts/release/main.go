@@ -17,10 +17,25 @@ import (
 // ── Config ────────────────────────────────────────────────────
 
 const (
-	projectName = "SEAPEDIA API"
-	prodBranch  = "main"
-	devBranch   = "dev"
+	projectName   = "SEAPEDIA API"
+	prodBranch    = "main"
+	stagingBranch = "staging"
+	devBranch     = "dev"
 )
+
+// releaseBranches: branch yang boleh untuk RELEASE PENUH (commit + tag + push).
+var releaseBranches = []string{prodBranch, stagingBranch, devBranch}
+
+func isReleaseBranch(b string) bool {
+	for _, rb := range releaseBranches {
+		if b == rb {
+			return true
+		}
+	}
+	return false
+}
+
+func releaseBranchList() string { return strings.Join(releaseBranches, ", ") }
 
 var projectRoot string
 
@@ -533,27 +548,13 @@ func checkAndConfirmRemote() bool {
 	return true
 }
 
-func offerCheckoutDev(currentBranch string) {
-	fmt.Printf("   %s⚠️  Release penuh hanya tersedia di branch '%s'.%s\n", YL, devBranch, RS)
-	if confirm(fmt.Sprintf("🔀  Pindah ke branch '%s' sekarang?", devBranch), true) {
-		cmd := exec.Command("git", "checkout", devBranch)
-		cmd.Dir = projectRoot
-		out, err := cmd.CombinedOutput()
-		if err == nil {
-			fmt.Printf("   %s✅ Pindah ke '%s'. Jalankan release lagi dari menu.%s\n", GR, devBranch, RS)
-		} else {
-			sep(RD)
-			fmt.Printf("%s❌  Gagal pindah ke branch '%s':%s\n", RD, devBranch, RS)
-			fmt.Printf("   %s%s%s\n", DM, strings.TrimSpace(string(out)), RS)
-			sep(RD)
-			fmt.Printf("\n  %sTekan Enter untuk kembali ke menu  |  q + Enter untuk keluar: %s", DM, RS)
-			sc := bufio.NewScanner(os.Stdin)
-			if sc.Scan() && strings.ToLower(strings.TrimSpace(sc.Text())) == "q" {
-				fmt.Printf("\n%s👋 Bye!%s\n\n", GR, RS)
-				os.Exit(0)
-			}
-		}
-	}
+func warnReleaseBranch(currentBranch string) {
+	sep(YL)
+	fmt.Printf("%s⚠️  Release penuh hanya boleh di branch: %s%s%s\n", YL, BD, releaseBranchList(), RS)
+	fmt.Printf("   %sSekarang di branch '%s%s%s'. Pindah dulu (mis. `git checkout %s`) lalu jalankan release lagi.%s\n",
+		DM, BD, currentBranch, RS+DM, prodBranch, RS)
+	sep(YL)
+	pauseBack()
 }
 
 // ── Status ────────────────────────────────────────────────────
@@ -570,7 +571,7 @@ func showStatus() {
 
 	for _, b := range []struct {
 		icon, branch string
-	}{{"🔧", devBranch}, {"🟢", prodBranch}} {
+	}{{"🔧", devBranch}, {"🧪", stagingBranch}, {"🟢", prodBranch}} {
 		tag := getLatestTagOnBranch(b.branch)
 		c := getLatestCommit(b.branch)
 		fmt.Printf("%s  %s%-10s%s → Tag: %s%-18s%s Commit: %s%s (%s)%s\n",
@@ -628,10 +629,10 @@ func release() {
 	sep(DM)
 
 	fmt.Printf("  %s📋  Rules:%s\n", BD, RS)
-	fmt.Printf("  %s• current       → Release penuh saja, wajib di branch '%s'%s\n", WH, devBranch, RS)
+	fmt.Printf("  %s• Release penuh → wajib di salah satu branch: %s%s\n", WH, releaseBranchList(), RS)
 	fmt.Printf("  %s• CHANGELOG.md harus sudah punya entry versi target sebelum release%s\n", WH, RS)
 	fmt.Printf("  %s• Tag versi tidak boleh sudah ada di remote sebelumnya%s\n", WH, RS)
-	fmt.Printf("  %s• Sync          → Auto pull --rebase, conflict = proses dibatalkan%s\n", WH, RS)
+	fmt.Printf("  %s• Sync          → Auto pull --rebase pada branch aktif, conflict = proses dibatalkan%s\n", WH, RS)
 
 	bumpOpts := []string{
 		fmt.Sprintf("current →  %sv%s%s  (Release penuh, tanpa bump)", CY, currentVersion, RS),
@@ -677,8 +678,8 @@ func release() {
 
 	isBumpOnly := false
 	if bumpIdx == 0 {
-		if currentBranch != devBranch {
-			offerCheckoutDev(currentBranch)
+		if !isReleaseBranch(currentBranch) {
+			warnReleaseBranch(currentBranch)
 			return
 		}
 	} else {
@@ -691,20 +692,20 @@ func release() {
 			return
 		}
 		isBumpOnly = modeIdx == 0
-		if !isBumpOnly && currentBranch != devBranch {
-			offerCheckoutDev(currentBranch)
+		if !isBumpOnly && !isReleaseBranch(currentBranch) {
+			warnReleaseBranch(currentBranch)
 			return
 		}
 	}
 
-	// Sync check
-	fmt.Printf("%s⏳ Mengecek sinkronisasi dengan remote (origin/%s)...%s\n", DM, devBranch, RS)
+	// Sync check — terhadap branch yang sedang aktif.
+	fmt.Printf("%s⏳ Mengecek sinkronisasi dengan remote (origin/%s)...%s\n", DM, currentBranch, RS)
 	run("git fetch origin")
-	behindStr := run(fmt.Sprintf("git rev-list --count HEAD..origin/%s", devBranch))
+	behindStr := run(fmt.Sprintf("git rev-list --count HEAD..origin/%s", currentBranch))
 	behind, _ := strconv.Atoi(behindStr)
 	if behind > 0 {
-		fmt.Printf("   %s⚠️  Tertinggal %d commit dari origin/%s — menjalankan rebase...%s\n", YL, behind, devBranch, RS)
-		cmd := exec.Command("git", "rebase", fmt.Sprintf("origin/%s", devBranch))
+		fmt.Printf("   %s⚠️  Tertinggal %d commit dari origin/%s — menjalankan rebase...%s\n", YL, behind, currentBranch, RS)
+		cmd := exec.Command("git", "rebase", fmt.Sprintf("origin/%s", currentBranch))
 		cmd.Dir = projectRoot
 		if err := cmd.Run(); err != nil {
 			exec.Command("git", "rebase", "--abort").Run()
@@ -714,9 +715,9 @@ func release() {
 			pauseBack()
 			return
 		}
-		fmt.Printf("   %s✅ Rebase terhadap origin/%s berhasil.%s\n", GR, devBranch, RS)
+		fmt.Printf("   %s✅ Rebase terhadap origin/%s berhasil.%s\n", GR, currentBranch, RS)
 	} else {
-		fmt.Printf("   %s✅ Branch '%s' sudah up-to-date dengan origin/%s.%s\n", GR, currentBranch, devBranch, RS)
+		fmt.Printf("   %s✅ Branch '%s' sudah up-to-date dengan origin/%s.%s\n", GR, currentBranch, currentBranch, RS)
 	}
 
 	if !checkAndConfirmRemote() {
