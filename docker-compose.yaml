@@ -1,0 +1,22 @@
+services:
+  saepedia-api:
+    build:
+      context: .
+      dockerfile: deployments/docker/Dockerfile
+
+    container_name: saepedia-api
+
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+
+    networks:
+      - postgres_default
+
+networks:
+  postgres_default:
+    external: true
