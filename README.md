@@ -51,18 +51,56 @@ Repository ini mengimplementasikan **Level 1 – Level 7** dari Technical Challe
 
 - [Go 1.25+](https://go.dev/dl/)
 - [PostgreSQL](https://www.postgresql.org/download/)
-- **Make** (opsional) & **golang-migrate** CLI
+- **Make** — dipakai untuk semua perintah `make ...` (lihat cara install di bawah)
+- **golang-migrate** CLI (terinstal otomatis lewat `make setup`)
 
-Install tooling (migrate + air) sekaligus:
+#### Install `make`
+
+**Windows** (pilih salah satu):
+
+```powershell
+# via Chocolatey
+choco install make
+
+# atau via Scoop
+scoop install make
+
+# atau via winget
+winget install GnuWin32.Make
+```
+> Pakai terminal **Git Bash / PowerShell**. Project ini memang menyetel `SHELL := powershell.exe`
+> di Makefile, jadi perintah `make` di Windows menjalankan resep berbasis PowerShell.
+
+**Linux**:
 
 ```bash
-make setup
+sudo apt install make        # Debian/Ubuntu
+sudo dnf install make        # Fedora
+sudo pacman -S make          # Arch
 ```
 
-Atau install `migrate` manual:
+**macOS**:
+
+```bash
+xcode-select --install       # sudah termasuk make
+# atau: brew install make
+```
+
+> **Tanpa Make?** Semua perintah bisa dijalankan manual — lihat padanannya di tabel
+> [Development Commands](#development-commands) (mis. `go run ./cmd/api`, `go run ./scripts/seed`).
+
+#### Install tooling project
+
+```bash
+make setup    # go mod tidy + install golang-migrate, air, swag
+```
+
+Atau manual tanpa make:
 
 ```bash
 go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+go install github.com/air-verse/air@latest
+go install github.com/swaggo/swag/cmd/swag@latest
 ```
 
 ### 1. Konfigurasi Environment
@@ -585,15 +623,26 @@ curl $BASE/driver/dashboard -H "Authorization: Bearer $DRIVER"   # → 401 token
 
 ## Development Commands
 
-```bash
-make setup            # install migrate + air, go mod tidy
-make run              # jalankan server
-make air              # hot reload (dev)
-make build            # build binary ke bin/
-make seed                 # jalankan semua seeder
-make seed-one name=user   # jalankan seeder satuan (data=user)
-make migrate-up       # jalankan semua migration
-make migrate-down     # rollback 1 step
-make migrate-create name=add_something   # buat migration baru
-make tidy             # go mod tidy
-```
+| Make command | Fungsi | Tanpa make (manual) |
+| ------------ | ------ | ------------------- |
+| `make setup` | install migrate+air+swag, go mod tidy | `go mod tidy` + `go install ...` (lihat Prerequisites) |
+| `make run` | jalankan server | `go run ./cmd/api` |
+| `make air` | hot reload (dev) | `air -c .air.toml` |
+| `make build` | build binary ke `bin/` | `go build -o bin/saepedia-api ./cmd/api` |
+| `make swag` | generate Swagger | `swag init -g cmd/api/main.go -o docs/swagger --parseInternal` |
+| `make seed` | semua seeder | `go run ./scripts/seed` |
+| `make seed-one name=user` | seeder satuan | `go run ./scripts/seed data=user` |
+| `make release` | release manager | `go run ./scripts/release` |
+| `make migrate-up` | jalankan semua migrasi | `migrate -path migrations -database "<DB_URL>" up` |
+| `make migrate-down [n=N]` | mundur N langkah (default 1) | `migrate ... down N` |
+| `make migrate-drop` | hapus semua tabel | `migrate ... drop -f` |
+| `make migrate-reset` | drop → up | `migrate ... drop -f` lalu `... up` |
+| `make db-reset` | drop → up → seed | gabungan di atas + `go run ./scripts/seed` |
+| `make migrate-create name=x` | buat migrasi baru | `migrate create -ext sql -dir migrations -format '20060102150405' x` |
+| `make tidy` | go mod tidy | `go mod tidy` |
+
+> `<DB_URL>` = `postgres://<user>:<password>@<host>:<port>/<db>?sslmode=disable`
+> (password dengan karakter spesial seperti `/` harus di-URL-encode, mis. `/` → `%2F`).
+>
+> **Catatan OS:** Makefile mendeteksi OS otomatis — Windows pakai resep PowerShell, Linux/macOS
+> pakai sh. Jadi semua `make ...` jalan di ketiga OS.
